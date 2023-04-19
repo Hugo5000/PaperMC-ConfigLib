@@ -1,22 +1,26 @@
 package at.hugob.plugin.library.config;
 
-import java.util.EnumSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.regex.Pattern;
-
+import com.destroystokyo.paper.profile.PlayerProfile;
+import com.destroystokyo.paper.profile.ProfileProperty;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.TextReplacementConfig;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.MemoryConfiguration;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.SkullMeta;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.*;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * Configuration Utils
@@ -189,5 +193,69 @@ public class ConfigUtils {
                     }
                 }).build());
         return result;
+    }
+
+    /**
+     * Gets an {@code ItemStack} from an {@code ConfigurationSection} at the specified Path
+     *
+     * @param config the {@code ConfigurationSection} where the {@code ItemStack} is in
+     * @param path   to the {@code ItemStack}
+     * @return the {@code ItemStack} for the corresponding {@code ConfigurationSection}
+     */
+    public static ItemStack getItemStack(@NotNull final ConfigurationSection config, @NotNull final String path) {
+        final ConfigurationSection itemConfig = config.getConfigurationSection(path);
+        if (itemConfig == null) return null;
+        return getItemStack(itemConfig);
+    }
+
+    /**
+     * Profile texture property name
+     */
+    private static final String TEXTURES = "textures";
+
+    /**
+     * Gets an {@code ItemStack} from an {@code ConfigurationSection}
+     *
+     * @param config the {@code ConfigurationSection} where the {@code ItemStack} is in
+     * @return the {@code ItemStack} for the corresponding {@code ConfigurationSection}
+     */
+    public static ItemStack getItemStack(@NotNull final ConfigurationSection config) {
+        final Material material = getMaterial(config, "material");
+        if (material == null || material.isAir() || !material.isItem()) return null;
+        final ItemStack itemStack = new ItemStack(material, config.getInt("amount", 1));
+        final ItemMeta itemMeta = itemStack.getItemMeta();
+        if (config.isString("name"))
+            itemMeta.displayName(Component.empty().decoration(TextDecoration.ITALIC, false).append(ConfigUtils.getComponent(config, "name")));
+        if (config.isList("lore"))
+            itemMeta.lore(config.getStringList("lore").stream()
+                    .map(LegacyComponentSerializer.legacyAmpersand()::deserialize)
+                    .map(component -> Component.empty().color(NamedTextColor.WHITE).decoration(TextDecoration.ITALIC, false).append(component))
+                    .collect(Collectors.toList()));
+        if (config.isInt("custom-model"))
+            itemMeta.setCustomModelData(config.getInt("custom-model"));
+        if (config.isBoolean("unbreakable"))
+            itemMeta.setUnbreakable(config.getBoolean("unbreakable"));
+        // Apply Head Meta if applicable
+        if (itemMeta instanceof final SkullMeta skullMeta) {
+            final UUID headUuid = ConfigUtils.getUUID(config, "texture.uuid");
+            if (headUuid != null)
+                skullMeta.setPlayerProfile(Bukkit.createProfile(headUuid));
+            if (config.isString("texture.data")) {
+                final ProfileProperty headTexture;
+                if (config.isString("texture.signature")) {
+                    headTexture = new ProfileProperty(TEXTURES, config.getString("texture.data"), config.getString("texture.signature"));
+                } else {
+                    headTexture = new ProfileProperty(TEXTURES, config.getString("texture.data"));
+                }
+                PlayerProfile profile = skullMeta.getPlayerProfile();
+                if (profile == null) {
+                    profile = Bukkit.createProfile("Player Head");
+                }
+                profile.setProperty(headTexture);
+                skullMeta.setPlayerProfile(profile);
+            }
+        }
+        itemStack.setItemMeta(itemMeta);
+        return itemStack;
     }
 }

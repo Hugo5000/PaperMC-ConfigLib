@@ -2,6 +2,9 @@ package at.hugob.plugin.library.config;
 
 import com.google.common.base.Charsets;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.serializer.ComponentSerializer;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -108,19 +111,54 @@ public class YamlFileConfig extends YamlConfiguration {
     }
 
     /**
-     * Gets a Message Component at a specific path and also substitutes all placeholders that have values in the config file
+     * Gets a Legacy Message Component at a specific path and also substitutes all placeholders that have values in the config file
+     *
+     * @param path the path the component
+     * @return the Component at the path
+     * @since 1.1.0
+     * @deprecated
+     */
+    public Component getComponent(String path) {
+        return getLegacyComponent(path);
+    }
+
+    /**
+     * Gets a Legacy Message Component at a specific path and also substitutes all placeholders that have values in the config file
      *
      * @param path the path the component
      * @return the Component at the path
      */
-    public Component getComponent(String path) {
+    public Component getLegacyComponent(String path) {
+        return getComponent(path, LegacyComponentSerializer.legacyAmpersand());
+    }
 
+    /**
+     * Gets a MiniMessage Component at a specific path and also substitutes all placeholders that have values in the config file
+     *
+     * @param path the path the component
+     * @return the Component at the path
+     */
+    public Component getMiniMessageComponent(String path) {
+        return getComponent(path, MiniMessage.miniMessage());
+    }
+
+
+    /**
+     * Gets a Message Component at a specific path and also substitutes all placeholders that have values in the config file
+     * <p>
+     * deserialized with the specified serializer
+     *
+     * @param path the path the component
+     * @param <T> The type the deserializer uses
+     * @param serializer the serializer to deserialize the message
+     * @return the Component at the path
+     */
+    public <T extends Component> Component getComponent(String path, ComponentSerializer<Component, T, String> serializer) {
         if (chatComponentCache.containsKey(path))
             return chatComponentCache.get(path);
 
-        Component result = ConfigUtils.getComponent(this, path);
+        Component result = ConfigUtils.getComponent(this, path, serializer);
         chatComponentCache.put(path, result);
         return result;
     }
-
 }

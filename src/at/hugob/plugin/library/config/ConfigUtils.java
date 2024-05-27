@@ -3,10 +3,10 @@ package at.hugob.plugin.library.config;
 import com.destroystokyo.paper.profile.PlayerProfile;
 import com.destroystokyo.paper.profile.ProfileProperty;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.TextReplacementConfig;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
+import net.kyori.adventure.text.serializer.ComponentSerializer;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -158,20 +158,36 @@ public class ConfigUtils {
 
     /**
      * Gets an {@code Component} from an {@code ConfigurationSection} at the specified Path
+     * it deserializes with the legacy component serializer
      *
      * @param config the {@code ConfigurationSection} where the {@code Component} is in
      * @param path   to the {@code Component}
      * @return corresponding {@code Component}, {@code Component.empty()} when the {@code Component} does not exist
      */
     public static @NotNull Component getComponent(@NotNull final ConfigurationSection config, @NotNull final String path) {
+        return getComponent(config, path, LegacyComponentSerializer.legacyAmpersand());
+    }
+
+    /**
+     * Gets an {@code Component} from an {@code ConfigurationSection} at the specified Path
+     * <p>
+     * deserialized with the specified serializer
+     *
+     * @param config the {@code ConfigurationSection} where the {@code Component} is in
+     * @param path   to the {@code Component}
+     * @param <T> the type that the deserializer uses
+     * @param serializer  the serializer to deserialize the message
+     * @return corresponding {@code Component}, {@code Component.empty()} when the {@code Component} does not exist
+     */
+    public static @NotNull <T extends Component> Component getComponent(@NotNull final ConfigurationSection config, @NotNull final String path, @NotNull final ComponentSerializer<Component, T, String> serializer) {
         Component result;
         if (config.isString(path)) {
-            result = LegacyComponentSerializer.legacyAmpersand().deserialize(config.getString(path));
+            result = serializer.deserialize(config.getString(path));
         } else if (config.isList(path)) {
             List<String> strings = config.getStringList(path);
             if (strings.isEmpty()) return Component.empty();
 
-            Iterator<TextComponent> componentIterator = strings.stream().map(LegacyComponentSerializer.legacyAmpersand()::deserialize).iterator();
+            Iterator<T> componentIterator = strings.stream().map(serializer::deserialize).iterator();
             result = Component.empty().append(componentIterator.next());
             while (componentIterator.hasNext()) {
                 result = result.append(Component.newline()).append(componentIterator.next());

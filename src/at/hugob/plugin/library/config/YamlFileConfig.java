@@ -16,6 +16,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.HashMap;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Supplier;
 import java.util.logging.Level;
 
@@ -110,6 +112,26 @@ public class YamlFileConfig extends YamlConfiguration {
         });
     }
 
+
+    private ReentrantLock saveLock = new ReentrantLock();
+
+    /**
+     * Saves the config file thread safe
+     */
+    public void saveSync() {
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            if (saveLock.hasQueuedThreads()) return; // already someone queued to save
+            saveLock.lock();
+            try {
+                save(configFile);
+            } catch (final IOException ex) {
+                plugin.getLogger().log(Level.SEVERE, ex, () -> "Could not save config to " + configFile);
+            } finally {
+                saveLock.unlock();
+            }
+        });
+    }
+
     /**
      * Gets a Legacy Message Component at a specific path and also substitutes all placeholders that have values in the config file
      *
@@ -118,6 +140,7 @@ public class YamlFileConfig extends YamlConfiguration {
      * @since 1.1.0
      * @deprecated
      */
+    @Deprecated
     public Component getComponent(String path) {
         return getLegacyComponent(path);
     }
@@ -148,8 +171,8 @@ public class YamlFileConfig extends YamlConfiguration {
      * <p>
      * deserialized with the specified serializer
      *
-     * @param path the path the component
-     * @param <T> The type the deserializer uses
+     * @param path       the path the component
+     * @param <T>        The type the deserializer uses
      * @param serializer the serializer to deserialize the message
      * @return the Component at the path
      */

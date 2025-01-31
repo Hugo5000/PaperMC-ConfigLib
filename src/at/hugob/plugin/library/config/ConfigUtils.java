@@ -265,7 +265,7 @@ public class ConfigUtils {
                 }
                 PlayerProfile profile = skullMeta.getPlayerProfile();
                 if (profile == null) {
-                    profile = Bukkit.createProfile("Player Head");
+                    profile = Bukkit.createProfile(null, null);
                 }
                 profile.setProperty(headTexture);
                 skullMeta.setPlayerProfile(profile);

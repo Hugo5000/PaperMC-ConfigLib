@@ -25,6 +25,12 @@ dependencies {
     compileOnly("org.jetbrains:annotations:24.0.1")
     // paper api
     compileOnly("io.papermc.paper:paper-api:1.20.6-R0.1-SNAPSHOT")
+
+
+    testImplementation("org.junit.jupiter:junit-jupiter:5.7.1")
+    testImplementation("net.kyori:adventure-api:4.21.0")
+    testImplementation("net.kyori:adventure-text-minimessage:4.21.0")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 java {
     toolchain {
@@ -70,6 +76,15 @@ tasks {
     }
     compileTestJava { options.encoding = "UTF-8" }
     javadoc { options.encoding = "UTF-8" }
+    test {
+        useJUnitPlatform()
+
+        maxHeapSize = "1G"
+
+        testLogging {
+            events("passed")
+        }
+    }
 }
 publishing {
     publications {

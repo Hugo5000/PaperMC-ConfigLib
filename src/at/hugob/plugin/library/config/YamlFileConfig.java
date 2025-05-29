@@ -133,16 +133,14 @@ public class YamlFileConfig extends YamlConfiguration {
     }
 
     /**
-     * Gets a Legacy Message Component at a specific path and also substitutes all placeholders that have values in the config file
+     * Gets a Legacy/MiniMessage Hybrid Component at a specific path and also substitutes all placeholders that have values in the config file
      *
      * @param path the path the component
      * @return the Component at the path
-     * @since 1.1.0
-     * @deprecated
      */
     @Deprecated
     public Component getComponent(String path) {
-        return getLegacyComponent(path);
+        return getComponent(path, MiniMsgLegacyHybridSerializer.INSTANCE);
     }
 
     /**

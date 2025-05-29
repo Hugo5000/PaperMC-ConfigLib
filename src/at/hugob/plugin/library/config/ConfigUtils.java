@@ -201,7 +201,7 @@ public class ConfigUtils {
                     final String componentKey = match.group(1);
                     if (componentKey.equals(path)) return componentBuilder.build();
 
-                    final Component replacement = getComponent(config, componentKey);
+                    final Component replacement = getComponent(config, componentKey, serializer);
                     if (!replacement.equals(Component.empty())) {
                         return replacement;
                     } else {

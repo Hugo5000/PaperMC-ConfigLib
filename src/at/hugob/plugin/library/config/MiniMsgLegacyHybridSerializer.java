@@ -7,11 +7,19 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.regex.Pattern;
 
+/**
+ * A Hybrid serializer that substitutes all legacy tags with MiniMessage Tags and then deserializes via MiniMessage
+ */
 public class MiniMsgLegacyHybridSerializer implements ComponentSerializer<Component, Component, String> {
     private final static Pattern LEGACY_HEX_PATTERN = Pattern.compile("&([0-9a-fA-F]{6})");
     private final static Pattern LEGACY_PATTERN = Pattern.compile("&([0-9a-fA-FklmnorKLMNOR])");
 
+    /**
+     * The instance of this class
+     */
     public final static MiniMsgLegacyHybridSerializer INSTANCE = new MiniMsgLegacyHybridSerializer();
+
+    private MiniMsgLegacyHybridSerializer() {}
 
     @Override
     public @NotNull Component deserialize(@NotNull String input) {

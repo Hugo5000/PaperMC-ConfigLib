@@ -3,6 +3,7 @@ plugins {
     id("idea")
     id("signing")
     id("maven-publish")
+    id("com.tddworks.sonatype-portal-publisher") version "0.0.1"
 }
 
 val ossrhUsername: String by project
@@ -24,7 +25,7 @@ repositories {
 dependencies {
     compileOnly("org.jetbrains:annotations:24.0.1")
     // paper api
-    compileOnly("io.papermc.paper:paper-api:1.20.6-R0.1-SNAPSHOT")
+    compileOnly("io.papermc.paper:paper-api:1.21.4-R0.1-SNAPSHOT")
 
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.7.1")
@@ -117,19 +118,28 @@ publishing {
             from(components["java"])
         }
     }
-    repositories {
-        maven {
-            val releasesRepoUrl = uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2")
-            val snapshotsRepoUrl = uri("https://s01.oss.sonatype.org/content/repositories/snapshots")
-            url = if (version.toString().endsWith("SNAPSHOT")) snapshotsRepoUrl else releasesRepoUrl
-            credentials {
-                username = ossrhUsername
-                password = ossrhPassword
-            }
-        }
-    }
+//    repositories {
+//        maven {
+//            name = "ossrh-staging-api"
+//            url = uri("https://central.sonatype.com/api/v1/publish")
+//            credentials {
+//                username = ossrhUsername
+//                password = ossrhPassword
+//            }
+//        }
+//    }
 }
 
 signing {
     sign(publishing.publications["mavenJava"])
+}
+
+sonatypePortalPublisher {
+    authentication {
+        username = ossrhUsername
+        password = ossrhPassword
+    }
+    settings {
+        autoPublish = false
+    }
 }

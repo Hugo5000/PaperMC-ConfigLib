@@ -2,6 +2,8 @@ package at.hugob.plugin.library.config;
 
 import com.destroystokyo.paper.profile.PlayerProfile;
 import com.destroystokyo.paper.profile.ProfileProperty;
+import io.papermc.paper.registry.keys.tags.ItemTypeTagKeys;
+import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextReplacementConfig;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -10,9 +12,11 @@ import net.kyori.adventure.text.serializer.ComponentSerializer;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.Registry;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.MemoryConfiguration;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.ItemType;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.jetbrains.annotations.NotNull;
@@ -101,6 +105,88 @@ public class ConfigUtils {
     }
 
     /**
+     * Converts a {@code List<String>} in an {@code ConfigurationSection} to an {@code EnumSet<Material>}
+     *
+     * @param config the {@code ConfigurationSection} where the {@code List<String>} is in
+     * @param path   the path to the {@code List<String>} in the {@code ConfigurationSection}
+     * @return the created {@code EnumSet<Material>}, {@code null} when the {@code List<String>} wasn't found
+     */
+    public static @Nullable Set<ItemType> getItemTypes(@NotNull final ConfigurationSection config, @NotNull final String path) {
+        if (!config.isList(path))
+            return null;
+        final Set<ItemType> result = new HashSet<>();
+        for (final String itemName : config.getStringList(path)) {
+            result.addAll(getItemTypes(itemName));
+        }
+        return result;
+    }
+
+
+    /**
+     * Gets an {@code ItemType} from an {@code ConfigurationSection} at the specified Path
+     *
+     * @param config the {@code ConfigurationSection} where the {@code Material} is in
+     * @param path   to the {@code ItemType}
+     * @return corresponding {@code ItemType}, {@code null} when the {@code ItemType} does not exist
+     */
+    public static @Nullable ItemType getItemType(@NotNull final ConfigurationSection config, @NotNull final String path) {
+        String itemName = config.getString(path);
+        if (itemName == null) return null;
+        return getItemType(itemName);
+    }
+
+
+    /**
+     * Converts a {@code String} Tag or ItemType Key to the corresponding {@code Collection<ItemType>}
+     *
+     * @param itemName {@code String} to convert
+     * @return corresponding {@code Collection<ItemType>}, an empty {@code Collection<ItemType>} when the
+     * Tag does not exist
+     */
+    public static @Nullable Collection<ItemType> getItemTypes(@NotNull final String itemName) {
+        if (itemName.startsWith("#")) {
+            var key = ItemTypeTagKeys.create(parseKey(itemName.substring(1)));
+            final Collection<ItemType> itemType = Registry.ITEM.getTag(key).resolve(Registry.ITEM);
+            if (itemType.isEmpty()) {
+                Bukkit.getLogger().warning(() -> String.format("\"%s\" is not a valid Tag name!", itemName));
+            }
+            return itemType;
+        } else {
+            return Collections.singleton(getItemType(itemName));
+        }
+    }
+
+    /**
+     * Converts a {@code String} to the corresponding {@code ItemType}
+     *
+     * @param itemName {@code String} to convert
+     * @return corresponding {@code ItemType}, {@code null} when the
+     * {@code ItemType} does not exist
+     */
+    public static @Nullable ItemType getItemType(@NotNull final String itemName) {
+        final var key = parseKey(itemName);
+        final var itemType = Registry.ITEM.get(key);
+        if (itemType == null) {
+            Bukkit.getLogger().warning(() -> String.format("\"%s\" is not a valid Item name!", itemType));
+        }
+        return itemType;
+    }
+
+    /**
+     * Parses a {@code String} into a Key
+     *
+     * @param key the key to parse in the format abc:xyz
+     * @return The parsed {@code Key} or null if it could not be parsed
+     */
+    public static @Nullable Key parseKey(@NotNull final String key) {
+        final var formattedKey = key.toLowerCase().replace(' ', '_');
+        if (!Key.parseable(formattedKey)) {
+            return null;
+        }
+        return Key.key(formattedKey);
+    }
+
+    /**
      * Gets an {@code Integer} from an {@code ConfigurationSection} at the specified Path
      *
      * @param config the {@code ConfigurationSection} where the {@code Integer} is in
@@ -173,10 +259,10 @@ public class ConfigUtils {
      * <p>
      * deserialized with the specified serializer
      *
-     * @param config the {@code ConfigurationSection} where the {@code Component} is in
-     * @param path   to the {@code Component}
-     * @param <T> the type that the deserializer uses
-     * @param serializer  the serializer to deserialize the message
+     * @param config     the {@code ConfigurationSection} where the {@code Component} is in
+     * @param path       to the {@code Component}
+     * @param <T>        the type that the deserializer uses
+     * @param serializer the serializer to deserialize the message
      * @return corresponding {@code Component}, {@code Component.empty()} when the {@code Component} does not exist
      */
     public static @NotNull <T extends Component> Component getComponent(@NotNull final ConfigurationSection config, @NotNull final String path, @NotNull final ComponentSerializer<Component, T, String> serializer) {
@@ -196,18 +282,18 @@ public class ConfigUtils {
             return Component.empty();
         }
         result = result.replaceText(TextReplacementConfig.builder()
-                .match(PLACE_HOLDER_PATTERN)
-                .replacement((match, componentBuilder) -> {
-                    final String componentKey = match.group(1);
-                    if (componentKey.equals(path)) return componentBuilder.build();
+            .match(PLACE_HOLDER_PATTERN)
+            .replacement((match, componentBuilder) -> {
+                final String componentKey = match.group(1);
+                if (componentKey.equals(path)) return componentBuilder.build();
 
-                    final Component replacement = getComponent(config, componentKey, serializer);
-                    if (!replacement.equals(Component.empty())) {
-                        return replacement;
-                    } else {
-                        return componentBuilder.build();
-                    }
-                }).build());
+                final Component replacement = getComponent(config, componentKey, serializer);
+                if (!replacement.equals(Component.empty())) {
+                    return replacement;
+                } else {
+                    return componentBuilder.build();
+                }
+            }).build());
         return result;
     }
 
@@ -235,18 +321,20 @@ public class ConfigUtils {
      * @param config the {@code ConfigurationSection} where the {@code ItemStack} is in
      * @return the {@code ItemStack} for the corresponding {@code ConfigurationSection}
      */
-    public static ItemStack getItemStack(@NotNull final ConfigurationSection config) {
-        final Material material = getMaterial(config, "material");
-        if (material == null || material.isAir() || !material.isItem()) return null;
-        final ItemStack itemStack = new ItemStack(material, config.getInt("amount", 1));
+    public static @NotNull ItemStack getItemStack(@NotNull final ConfigurationSection config) {
+        final ItemType itemType = getItemType(config, "material");
+        if (itemType == null) return ItemStack.empty();
+        final ItemStack itemStack = itemType.createItemStack(config.getInt("amount", 1));
         final ItemMeta itemMeta = itemStack.getItemMeta();
+        if (config.isBoolean("enchantment-glint"))
+            itemMeta.setEnchantmentGlintOverride(config.getBoolean("enchantment-glint"));
         if (config.isString("name"))
             itemMeta.displayName(Component.empty().decoration(TextDecoration.ITALIC, false).append(ConfigUtils.getComponent(config, "name")));
         if (config.isList("lore"))
             itemMeta.lore(config.getStringList("lore").stream()
-                    .map(LegacyComponentSerializer.legacyAmpersand()::deserialize)
-                    .map(component -> Component.empty().color(NamedTextColor.WHITE).decoration(TextDecoration.ITALIC, false).append(component))
-                    .collect(Collectors.toList()));
+                .map(LegacyComponentSerializer.legacyAmpersand()::deserialize)
+                .map(component -> Component.empty().color(NamedTextColor.WHITE).decoration(TextDecoration.ITALIC, false).append(component))
+                .collect(Collectors.toList()));
         if (config.isInt("custom-model"))
             itemMeta.setCustomModelData(config.getInt("custom-model"));
         if (config.isBoolean("unbreakable"))

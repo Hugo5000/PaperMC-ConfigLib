@@ -146,7 +146,7 @@ public class ConfigUtils {
     public static @Nullable Collection<ItemType> getItemTypes(@NotNull final String itemName) {
         if (itemName.startsWith("#")) {
             var key = ItemTypeTagKeys.create(parseKey(itemName.substring(1)));
-            final Collection<ItemType> itemType = Registry.ITEM.getTag(key).resolve(Registry.ITEM);
+            final Collection<ItemType> itemType = Registry.ITEM.getTag(key).resolve(Registry.ITEM).stream().sorted().toList();
             if (itemType.isEmpty()) {
                 Bukkit.getLogger().warning(() -> String.format("\"%s\" is not a valid Tag name!", itemName));
             }

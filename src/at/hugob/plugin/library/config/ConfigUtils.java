@@ -114,7 +114,7 @@ public class ConfigUtils {
     public static @Nullable Set<ItemType> getItemTypes(@NotNull final ConfigurationSection config, @NotNull final String path) {
         if (!config.isList(path))
             return null;
-        final Set<ItemType> result = new HashSet<>();
+        final Set<ItemType> result = new LinkedHashSet<>();
         for (final String itemName : config.getStringList(path)) {
             result.addAll(getItemTypes(itemName));
         }
@@ -146,7 +146,7 @@ public class ConfigUtils {
     public static @Nullable Collection<ItemType> getItemTypes(@NotNull final String itemName) {
         if (itemName.startsWith("#")) {
             var key = ItemTypeTagKeys.create(parseKey(itemName.substring(1)));
-            final Collection<ItemType> itemType = Registry.ITEM.getTag(key).resolve(Registry.ITEM).stream().sorted().toList();
+            final Collection<ItemType> itemType = Registry.ITEM.getTag(key).resolve(Registry.ITEM).stream().sorted(Comparator.comparing(i -> i.getKey().getKey())).toList();
             if (itemType.isEmpty()) {
                 Bukkit.getLogger().warning(() -> String.format("\"%s\" is not a valid Tag name!", itemName));
             }

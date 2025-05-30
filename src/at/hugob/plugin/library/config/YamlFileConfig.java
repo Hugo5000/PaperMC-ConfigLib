@@ -8,7 +8,10 @@ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -16,7 +19,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.HashMap;
-import java.util.concurrent.locks.Condition;
+import java.util.Objects;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Supplier;
 import java.util.logging.Level;
@@ -51,7 +54,7 @@ public class YamlFileConfig extends YamlConfiguration {
      * @param filePath    the path to the config
      * @param inputStream the input stream that gets the default config file
      */
-    public YamlFileConfig(final JavaPlugin plugin, final String filePath, final Supplier<InputStream> inputStream) {
+    public YamlFileConfig(final JavaPlugin plugin, final String filePath, final @Nullable Supplier<InputStream> inputStream) {
         this.inputStream = inputStream;
         this.filePath = filePath;
         configFile = new File(plugin.getDataFolder(), filePath);
@@ -63,7 +66,7 @@ public class YamlFileConfig extends YamlConfiguration {
      * Reload the config file from the disc or copies the default config file to the config location and loads that
      */
     public void reload() {
-        if (!configFile.exists()) {
+        if (!configFile.exists() && inputStream != null) {
             configFile.getParentFile().mkdirs();
             try {
                 configFile.createNewFile();
@@ -82,19 +85,28 @@ public class YamlFileConfig extends YamlConfiguration {
                 return;
             }
         }
-        try {
-            load(configFile);
-
-        } catch (IOException | InvalidConfigurationException e) {
-            plugin.getLogger().log(Level.SEVERE, String.format("Could not load Config from \"%s\"", filePath), e);
-            return;
-        }
-        try (InputStream defConfigStream = inputStream.get()) {
-            if (defConfigStream != null) {
-                setDefaults(YamlConfiguration.loadConfiguration(new InputStreamReader(defConfigStream, Charsets.UTF_8)));
+        if(configFile.exists()) {
+            try {
+                load(configFile);
+            } catch (IOException | InvalidConfigurationException e) {
+                plugin.getLogger().log(Level.SEVERE, String.format("Could not load Config from \"%s\"", filePath), e);
+                return;
             }
-        } catch (IOException e) {
-            plugin.getLogger().log(Level.SEVERE, String.format("Could not load the Default config for \"%s\"", filePath), e);
+        } else {
+            try {
+                loadFromString("");
+            } catch (InvalidConfigurationException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        if(inputStream != null) {
+            try (InputStream defConfigStream = inputStream.get()) {
+                if (defConfigStream != null) {
+                    setDefaults(YamlConfiguration.loadConfiguration(new InputStreamReader(defConfigStream, Charsets.UTF_8)));
+                }
+            } catch (IOException e) {
+                plugin.getLogger().log(Level.SEVERE, String.format("Could not load the Default config for \"%s\"", filePath), e);
+            }
         }
         chatComponentCache.clear();
     }
@@ -181,5 +193,15 @@ public class YamlFileConfig extends YamlConfiguration {
         Component result = ConfigUtils.getComponent(this, path, serializer);
         chatComponentCache.put(path, result);
         return result;
+    }
+
+    @Override
+    public @Nullable ItemStack getItemStack(@NotNull String path) {
+        return ConfigUtils.getItemStack(this, path);
+    }
+
+    @Override
+    public @Nullable ItemStack getItemStack(@NotNull String path, @Nullable ItemStack def) {
+        return Objects.requireNonNullElse(getItemStack(path), def);
     }
 }

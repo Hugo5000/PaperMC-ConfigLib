@@ -332,7 +332,7 @@ public class ConfigUtils {
             itemMeta.displayName(Component.empty().decoration(TextDecoration.ITALIC, false).append(ConfigUtils.getComponent(config, "name")));
         if (config.isList("lore"))
             itemMeta.lore(config.getStringList("lore").stream()
-                .map(LegacyComponentSerializer.legacyAmpersand()::deserialize)
+                .map(MiniMsgLegacyHybridSerializer.INSTANCE::deserialize)
                 .map(component -> Component.empty().color(NamedTextColor.WHITE).decoration(TextDecoration.ITALIC, false).append(component))
                 .collect(Collectors.toList()));
         if (config.isInt("custom-model"))

@@ -3,7 +3,7 @@ plugins {
     id("idea")
     id("signing")
     id("maven-publish")
-    id("com.tddworks.sonatype-portal-publisher") version "0.0.1"
+    id("com.tddworks.central-portal-publisher") version "0.0.5"
 }
 
 val ossrhUsername: String by project

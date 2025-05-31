@@ -165,7 +165,13 @@ public class ConfigUtils {
             }
             return itemType;
         } else {
-            return Collections.singleton(getItemType(itemName));
+            var formatted = formattedKey(itemName);
+            if (Key.parseable(formatted)) {
+                return Collections.singleton(Registry.ITEM.get(Key.key(formatted)));
+            } else {
+                var regex = "^" + formatted + "$";
+                return Registry.ITEM.stream().filter(i -> i.getKey().getKey().matches(regex)).sorted(Comparator.comparing(i -> i.getKey().getKey())).toList();
+            }
         }
     }
 
@@ -192,11 +198,15 @@ public class ConfigUtils {
      * @return The parsed {@code Key} or null if it could not be parsed
      */
     public static @Nullable Key parseKey(@NotNull final String key) {
-        final var formattedKey = key.toLowerCase().replace(' ', '_');
+        final var formattedKey = formattedKey(key);
         if (!Key.parseable(formattedKey)) {
             return null;
         }
         return Key.key(formattedKey);
+    }
+
+    private static @NotNull String formattedKey(@NotNull String key) {
+        return key.toLowerCase().replace(' ', '_');
     }
 
     /**
@@ -426,6 +436,48 @@ public class ConfigUtils {
         final @Nullable TagResolver tagResolver, @Nullable Pointered target
     ) {
         return parseComponent(config, text, MiniMsgLegacyHybridSerializer.INSTANCE, tagResolver, target, new ArrayList<>());
+    }
+
+    /**
+     * Parses a list of texts into a List of Components seperated by new lines and tries to parse any references ({@code <ref:'<path>'>}) that it finds
+     *
+     * @param config      The config to take the paths from
+     * @param text        The List of texts to parse
+     * @param tagResolver An optional TagResolver to use
+     * @param target      An optional target to use
+     * @return the List of parsed Component
+     */
+    public static @NotNull List<Component> parseComponentList(
+        @NotNull final ConfigurationSection config, @NotNull final List<String> text,
+        final @Nullable TagResolver tagResolver, @Nullable Pointered target
+    ) {
+        return text.stream()
+            .map(s -> parseComponent(config, s, MiniMsgLegacyHybridSerializer.INSTANCE, tagResolver, target, new ArrayList<>()))
+            .toList();
+    }
+
+    /**
+     * Parses a list of texts into a List of Components seperated by new lines and tries to parse any references ({@code <ref:'<path>'>}) that it finds
+     *
+     * @param config      The config to take the paths from
+     * @param text        The List of texts to parse
+     * @param tagResolver An optional TagResolver to use
+     * @param target      An optional target to use
+     * @return the List of parsed Component
+     */
+    public static @NotNull List<? extends Component> parseLoreComponentList(
+        @NotNull final ConfigurationSection config, @NotNull final List<String> text,
+        final @Nullable TagResolver tagResolver, @Nullable Pointered target
+    ) {
+        return text.stream()
+            .map(s -> Component.empty()
+                .color(NamedTextColor.WHITE)
+                .decoration(TextDecoration.ITALIC, false)
+                .append(
+                    parseComponent(config, s, MiniMsgLegacyHybridSerializer.INSTANCE, tagResolver, target, new ArrayList<>())
+                )
+            )
+            .toList();
     }
 
     private static @NotNull Component parseComponent(

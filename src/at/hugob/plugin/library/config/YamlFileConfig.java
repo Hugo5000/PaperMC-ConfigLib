@@ -1,10 +1,11 @@
 package at.hugob.plugin.library.config;
 
 import com.google.common.base.Charsets;
+import net.kyori.adventure.pointer.Pointered;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import net.kyori.adventure.text.serializer.ComponentSerializer;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -18,7 +19,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.HashMap;
 import java.util.Objects;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Supplier;
@@ -33,8 +33,6 @@ public class YamlFileConfig extends YamlConfiguration {
     private final File configFile;
     private final JavaPlugin plugin;
     private final Supplier<InputStream> inputStream;
-
-    private final HashMap<String, Component> chatComponentCache = new HashMap<>();
 
     /**
      * Creates a YamlFileConfiguration at the specified path inside the plugins folder
@@ -85,7 +83,7 @@ public class YamlFileConfig extends YamlConfiguration {
                 return;
             }
         }
-        if(configFile.exists()) {
+        if (configFile.exists()) {
             try {
                 load(configFile);
             } catch (IOException | InvalidConfigurationException e) {
@@ -99,7 +97,7 @@ public class YamlFileConfig extends YamlConfiguration {
                 throw new RuntimeException(e);
             }
         }
-        if(inputStream != null) {
+        if (inputStream != null) {
             try (InputStream defConfigStream = inputStream.get()) {
                 if (defConfigStream != null) {
                     setDefaults(YamlConfiguration.loadConfiguration(new InputStreamReader(defConfigStream, Charsets.UTF_8)));
@@ -108,7 +106,6 @@ public class YamlFileConfig extends YamlConfiguration {
                 plugin.getLogger().log(Level.SEVERE, String.format("Could not load the Default config for \"%s\"", filePath), e);
             }
         }
-        chatComponentCache.clear();
     }
 
     /**
@@ -150,49 +147,48 @@ public class YamlFileConfig extends YamlConfiguration {
      * @param path the path the component
      * @return the Component at the path
      */
-    @Deprecated
-    public Component getComponent(String path) {
-        return getComponent(path, MiniMsgLegacyHybridSerializer.INSTANCE);
+    public Component getComponent(@NotNull String path) {
+        return getComponent(path, MiniMsgLegacyHybridSerializer.INSTANCE, null, null);
     }
 
     /**
-     * Gets a Legacy Message Component at a specific path and also substitutes all placeholders that have values in the config file
+     * Gets a Legacy/MiniMessage Hybrid Component at a specific path and also substitutes all placeholders that have values in the config file
      *
-     * @param path the path the component
+     * @param path        the path the component
+     * @param tagResolver An optional TagResolver to use
      * @return the Component at the path
      */
-    public Component getLegacyComponent(String path) {
-        return getComponent(path, LegacyComponentSerializer.legacyAmpersand());
+    public Component getComponent(@NotNull String path, @Nullable TagResolver tagResolver) {
+        return getComponent(path, MiniMsgLegacyHybridSerializer.INSTANCE, tagResolver, null);
     }
 
     /**
-     * Gets a MiniMessage Component at a specific path and also substitutes all placeholders that have values in the config file
+     * Gets a Legacy/MiniMessage Hybrid Component at a specific path and also substitutes all placeholders that have values in the config file
      *
-     * @param path the path the component
+     * @param path        the path the component
+     * @param tagResolver An optional TagResolver to use
+     * @param target      An optional target for the TagResolver to use
      * @return the Component at the path
      */
-    public Component getMiniMessageComponent(String path) {
-        return getComponent(path, MiniMessage.miniMessage());
+    public Component getComponent(@NotNull String path, @Nullable TagResolver tagResolver, @Nullable Pointered target) {
+        return getComponent(path, MiniMsgLegacyHybridSerializer.INSTANCE, tagResolver, target);
     }
-
 
     /**
      * Gets a Message Component at a specific path and also substitutes all placeholders that have values in the config file
      * <p>
      * deserialized with the specified serializer
      *
-     * @param path       the path the component
-     * @param <T>        The type the deserializer uses
-     * @param serializer the serializer to deserialize the message
+     * @param path        the path the component
+     * @param <T>         The type the deserializer uses
+     * @param serializer  the serializer to deserialize the message
+     * @param tagResolver An optional Tag resolver
+     * @param target      An optional target to use for the TagResolver
      * @return the Component at the path
      */
-    public <T extends Component> Component getComponent(String path, ComponentSerializer<Component, T, String> serializer) {
-        if (chatComponentCache.containsKey(path))
-            return chatComponentCache.get(path);
-
-        Component result = ConfigUtils.getComponent(this, path, serializer);
-        chatComponentCache.put(path, result);
-        return result;
+    public <T extends Component> Component getComponent(String path, ComponentSerializer<Component, T, String> serializer, TagResolver tagResolver, Pointered target) {
+        if (!(serializer instanceof MiniMessage miniMessage)) return ConfigUtils.getComponent(this, path, serializer);
+        return ConfigUtils.getComponent(this, path, miniMessage, tagResolver, target);
     }
 
     @Override

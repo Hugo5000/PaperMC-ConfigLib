@@ -1,8 +1,10 @@
 package at.hugob.plugin.library.config;
 
+import net.kyori.adventure.pointer.Pointered;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
-import net.kyori.adventure.text.serializer.ComponentSerializer;
+import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
+import net.kyori.adventure.text.minimessage.tree.Node;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.regex.Pattern;
@@ -10,9 +12,11 @@ import java.util.regex.Pattern;
 /**
  * A Hybrid serializer that substitutes all legacy tags with MiniMessage Tags and then deserializes via MiniMessage
  */
-public class MiniMsgLegacyHybridSerializer implements ComponentSerializer<Component, Component, String> {
+public class MiniMsgLegacyHybridSerializer implements MiniMessage {
     private final static Pattern LEGACY_HEX_PATTERN = Pattern.compile("&([0-9a-fA-F]{6})");
     private final static Pattern LEGACY_PATTERN = Pattern.compile("&([0-9a-fA-FklmnorKLMNOR])");
+
+    private final MiniMessage miniMessage = MiniMessage.miniMessage();
 
     /**
      * The instance of this class
@@ -21,15 +25,80 @@ public class MiniMsgLegacyHybridSerializer implements ComponentSerializer<Compon
 
     private MiniMsgLegacyHybridSerializer() {}
 
-    @Override
-    public @NotNull Component deserialize(@NotNull String input) {
-        input = parseLegacy(input);
-        return MiniMessage.miniMessage().deserialize(input);
-    }
 
     @Override
     public @NotNull String serialize(@NotNull Component component) {
-        return "";
+        return miniMessage.serialize(component);
+    }
+
+    @Override
+    public @NotNull String escapeTags(@NotNull String input) {
+        return miniMessage.escapeTags(input);
+    }
+
+    @Override
+    public @NotNull String escapeTags(@NotNull String input, @NotNull TagResolver tagResolver) {
+        return miniMessage.escapeTags(input, tagResolver);
+    }
+
+    @Override
+    public @NotNull String stripTags(@NotNull String input) {
+        return miniMessage.stripTags(input);
+    }
+
+    @Override
+    public @NotNull String stripTags(@NotNull String input, @NotNull TagResolver tagResolver) {
+        return miniMessage.stripTags(input, tagResolver);
+    }
+
+    @Override
+    public @NotNull Component deserialize(@NotNull String input) {
+        return miniMessage.deserialize(parseLegacy(input));
+    }
+
+    @Override
+    public @NotNull Component deserialize(@NotNull String input, @NotNull Pointered target) {
+        return miniMessage.deserialize(parseLegacy(input), target);
+    }
+
+    @Override
+    public @NotNull Component deserialize(@NotNull String input, @NotNull TagResolver tagResolver) {
+        return miniMessage.deserialize(parseLegacy(input), tagResolver);
+    }
+
+    @Override
+    public @NotNull Component deserialize(@NotNull String input, @NotNull Pointered target, @NotNull TagResolver tagResolver) {
+        return miniMessage.deserialize(parseLegacy(input), target, tagResolver);
+    }
+
+    @Override
+    public Node.Root deserializeToTree(@NotNull String input) {
+        return miniMessage.deserializeToTree(parseLegacy(input));
+    }
+
+    @Override
+    public Node.Root deserializeToTree(@NotNull String input, @NotNull Pointered target) {
+        return miniMessage.deserializeToTree(parseLegacy(input), target);
+    }
+
+    @Override
+    public Node.Root deserializeToTree(@NotNull String input, @NotNull TagResolver tagResolver) {
+        return miniMessage.deserializeToTree(parseLegacy(input), tagResolver);
+    }
+
+    @Override
+    public Node.Root deserializeToTree(@NotNull String input, @NotNull Pointered target, @NotNull TagResolver tagResolver) {
+        return miniMessage.deserializeToTree(parseLegacy(input), target, tagResolver);
+    }
+
+    @Override
+    public boolean strict() {
+        return miniMessage.strict();
+    }
+
+    @Override
+    public @NotNull TagResolver tags() {
+        return miniMessage.tags();
     }
 
     private String parseLegacy(String input) {

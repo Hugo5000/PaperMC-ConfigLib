@@ -4,12 +4,15 @@ import com.destroystokyo.paper.profile.PlayerProfile;
 import com.destroystokyo.paper.profile.ProfileProperty;
 import io.papermc.paper.registry.keys.tags.ItemTypeTagKeys;
 import net.kyori.adventure.key.Key;
+import net.kyori.adventure.pointer.Pointered;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextReplacementConfig;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
+import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.minimessage.tag.Tag;
+import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import net.kyori.adventure.text.serializer.ComponentSerializer;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Registry;
@@ -22,7 +25,17 @@ import org.bukkit.inventory.meta.SkullMeta;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.EnumSet;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -244,18 +257,6 @@ public class ConfigUtils {
 
     /**
      * Gets an {@code Component} from an {@code ConfigurationSection} at the specified Path
-     * it deserializes with the legacy component serializer
-     *
-     * @param config the {@code ConfigurationSection} where the {@code Component} is in
-     * @param path   to the {@code Component}
-     * @return corresponding {@code Component}, {@code Component.empty()} when the {@code Component} does not exist
-     */
-    public static @NotNull Component getComponent(@NotNull final ConfigurationSection config, @NotNull final String path) {
-        return getComponent(config, path, LegacyComponentSerializer.legacyAmpersand());
-    }
-
-    /**
-     * Gets an {@code Component} from an {@code ConfigurationSection} at the specified Path
      * <p>
      * deserialized with the specified serializer
      *
@@ -265,7 +266,10 @@ public class ConfigUtils {
      * @param serializer the serializer to deserialize the message
      * @return corresponding {@code Component}, {@code Component.empty()} when the {@code Component} does not exist
      */
-    public static @NotNull <T extends Component> Component getComponent(@NotNull final ConfigurationSection config, @NotNull final String path, @NotNull final ComponentSerializer<Component, T, String> serializer) {
+    public static @NotNull <T extends Component> Component getComponent(
+        @NotNull final ConfigurationSection config, @NotNull final String path,
+        @NotNull final ComponentSerializer<Component, T, String> serializer
+    ) {
         Component result;
         if (config.isString(path)) {
             result = serializer.deserialize(config.getString(path));
@@ -295,6 +299,161 @@ public class ConfigUtils {
                 }
             }).build());
         return result;
+    }
+
+    /**
+     * Parses a component from the config at a specific path
+     *
+     * @param config The config to parse from
+     * @param path   The path where the component should be parse from
+     * @return The component that was parsed or Component.empty()
+     */
+    public static @NotNull Component getComponent(
+        @NotNull final ConfigurationSection config, @NotNull final String path
+    ) {
+        return getComponent(config, path, null, null);
+    }
+
+    /**
+     * Parses a component from the config at a specific path
+     *
+     * @param config      The config to parse from
+     * @param path        The path where the component should be parse from
+     * @param tagResolver A tag resolver
+     * @return The component that was parsed or Component.empty()
+     */
+    public static @NotNull Component getComponent(
+        @NotNull final ConfigurationSection config, @NotNull final String path,
+        final @Nullable TagResolver tagResolver
+    ) {
+        return getComponent(config, path, tagResolver, null);
+    }
+
+    /**
+     * Parses a component from the config at a specific path
+     *
+     * @param config      The config to parse from
+     * @param path        The path where the component should be parse from
+     * @param tagResolver A tag resolver
+     * @param target      A target to use for the tag resolvers
+     * @return The component that was parsed or Component.empty()
+     */
+    public static @NotNull Component getComponent(
+        @NotNull final ConfigurationSection config, @NotNull final String path,
+        final @Nullable TagResolver tagResolver, @Nullable Pointered target
+    ) {
+        return getComponent(config, path, MiniMsgLegacyHybridSerializer.INSTANCE, tagResolver, target);
+    }
+
+    /**
+     * Parses a component from the config at a specific path
+     *
+     * @param config      The config to parse from
+     * @param path        The path where the component should be parse from
+     * @param serializer  The serializer to use
+     * @param tagResolver A tag resolver
+     * @param target      A target to use for the tag resolvers
+     * @return The component that was parsed or Component.empty()
+     */
+    public static @NotNull Component getComponent(
+        @NotNull final ConfigurationSection config, @NotNull final String path,
+        @NotNull final MiniMessage serializer,
+        final @Nullable TagResolver tagResolver, @Nullable Pointered target
+    ) {
+        return getComponent(config, path, serializer, tagResolver, target, new ArrayList<>());
+    }
+
+    private static @NotNull Component getComponent(
+        @NotNull final ConfigurationSection config, @NotNull final String path,
+        @NotNull final MiniMessage serializer,
+        final @Nullable TagResolver tagResolver, @Nullable Pointered target,
+        @NotNull List<String> vistedSubSections
+    ) {
+        vistedSubSections.add(path);
+        if (config.isString(path)) {
+            return parseComponent(config, config.getString(path), serializer, tagResolver, target, vistedSubSections);
+        } else if (config.isList(path)) {
+            List<String> strings = config.getStringList(path);
+            if (strings.isEmpty()) return Component.empty();
+            return parseComponent(config, strings, serializer, tagResolver, target, vistedSubSections);
+        } else {
+            return Component.empty();
+        }
+    }
+
+    /**
+     * Parses a text into a Component and tries to parse any references ({@code <ref:'<path>'>}) that it finds
+     *
+     * @param config      The config to take the paths from
+     * @param text        The text to parse
+     * @param tagResolver An optional TagResolver to use
+     * @param target      An optional target to use
+     * @return the parsed Component
+     */
+    public static @NotNull Component parseComponent(
+        @NotNull final ConfigurationSection config, @NotNull final String text,
+        @Nullable TagResolver tagResolver, @Nullable Pointered target
+    ) {
+        return parseComponent(config, text, MiniMsgLegacyHybridSerializer.INSTANCE, tagResolver, target, new ArrayList<>());
+    }
+
+    private static @NotNull Component parseComponent(
+        @NotNull final ConfigurationSection config, @NotNull final String text,
+        @NotNull final MiniMessage serializer,
+        @Nullable TagResolver tagResolver, @Nullable Pointered target,
+        @NotNull List<String> vistedSubSections
+    ) {
+        tagResolver = createSubSectionResolver(config, serializer, tagResolver, target, vistedSubSections);
+        if (target == null) {
+            return serializer.deserialize(text, tagResolver);
+        } else {
+            return serializer.deserialize(text, target, tagResolver);
+        }
+    }
+
+
+    /**
+     * Parses a list of texts into a Component seperated by new lines and tries to parse any references ({@code <ref:'<path>'>}) that it finds
+     *
+     * @param config      The config to take the paths from
+     * @param text        The List of texts to parse
+     * @param tagResolver An optional TagResolver to use
+     * @param target      An optional target to use
+     * @return the parsed Component
+     */
+    public static @NotNull Component parseComponent(
+        @NotNull final ConfigurationSection config, @NotNull final List<String> text,
+        final @Nullable TagResolver tagResolver, @Nullable Pointered target
+    ) {
+        return parseComponent(config, text, MiniMsgLegacyHybridSerializer.INSTANCE, tagResolver, target, new ArrayList<>());
+    }
+
+    private static @NotNull Component parseComponent(
+        @NotNull final ConfigurationSection config, @NotNull final List<String> text,
+        @NotNull final MiniMessage serializer,
+        final @Nullable TagResolver tagResolver, @Nullable Pointered target,
+        @NotNull List<String> vistedSubSections
+    ) {
+        return text.stream()
+            .map(s -> parseComponent(config, s, serializer, tagResolver, target, vistedSubSections))
+            .reduce((c1, c2) -> c1.append(Component.newline()).append(c2))
+            .orElse(Component.empty());
+    }
+
+    private static @NotNull TagResolver createSubSectionResolver(
+        @NotNull ConfigurationSection config, @NotNull MiniMessage serializer,
+        @Nullable TagResolver tagResolver, @Nullable Pointered target,
+        @NotNull List<String> vistedSubSections
+    ) {
+        final TagResolver subSectionResolver = TagResolver.resolver("ref", (argumentQueue, context) -> {
+            final String reference = argumentQueue.popOr("reference expected").value();
+            return Tag.inserting(getComponent(config, reference, serializer, tagResolver, target, vistedSubSections));
+        });
+        if (tagResolver != null) {
+            return TagResolver.resolver(tagResolver, subSectionResolver);
+        } else {
+            return subSectionResolver;
+        }
     }
 
     /**

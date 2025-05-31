@@ -32,6 +32,7 @@ import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -124,14 +125,14 @@ public class ConfigUtils {
      * @param path   the path to the {@code List<String>} in the {@code ConfigurationSection}
      * @return the created {@code EnumSet<Material>}, {@code null} when the {@code List<String>} wasn't found
      */
-    public static @Nullable Set<ItemType> getItemTypes(@NotNull final ConfigurationSection config, @NotNull final String path) {
+    public static @Nullable Collection<ItemType> getItemTypes(@NotNull final ConfigurationSection config, @NotNull final String path) {
         if (!config.isList(path))
             return null;
-        final Set<ItemType> result = new LinkedHashSet<>();
+        final List<ItemType> result = new LinkedList<>();
         for (final String itemName : config.getStringList(path)) {
             result.addAll(getItemTypes(itemName));
         }
-        return result;
+        return new ArrayList<>(result);
     }
 
 

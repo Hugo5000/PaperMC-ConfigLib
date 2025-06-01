@@ -20,6 +20,7 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.MemoryConfiguration;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.ItemType;
+import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.jetbrains.annotations.NotNull;
@@ -31,14 +32,13 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.Iterator;
-import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Configuration Utils
@@ -165,15 +165,32 @@ public class ConfigUtils {
                 Bukkit.getLogger().warning(() -> String.format("\"%s\" is not a valid Tag name!", itemName));
             }
             return itemType;
+        } else if(itemName.startsWith("@")) {
+            switch (formattedKey(itemName)) {
+                case "foods", "edible": return itemTypes().filter(itemType -> itemType.isEdible()).toList();
+                case "records": return itemTypes().filter(itemType -> itemType.isRecord()).toList();
+                case "damageable", "durability": return itemTypes().filter(itemType -> Damageable.class.isAssignableFrom(itemType.getItemMetaClass())).toList();
+                case "block": return itemTypes().filter(ItemType::hasBlockType).toList();
+                case "item": return itemTypes().filter(itemType -> !itemType.hasBlockType()).toList();
+                default:
+                    Bukkit.getLogger().warning(() -> String.format("\"%s\" is not a valid meta Tag!", itemName));
+                    return Collections.emptyList();
+            }
         } else {
             var formatted = formattedKey(itemName);
             if (Key.parseable(formatted)) {
-                return Collections.singleton(Registry.ITEM.get(Key.key(formatted)));
+                Key key = Key.key(formatted);
+                var itemType = Registry.ITEM.get(key);
+                if(itemType == null) return Collections.emptyList();
+                return Collections.singleton(itemType);
             } else {
                 var regex = "^" + formatted + "$";
                 return Registry.ITEM.stream().filter(i -> i.getKey().getKey().matches(regex)).sorted(Comparator.comparing(i -> i.getKey().getKey())).toList();
             }
         }
+    }
+    private static Stream<ItemType> itemTypes() {
+        return Registry.ITEM.stream().filter(itemType -> itemType != ItemType.AIR);
     }
 
     /**

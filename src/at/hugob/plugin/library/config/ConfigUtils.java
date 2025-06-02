@@ -2,6 +2,7 @@ package at.hugob.plugin.library.config;
 
 import com.destroystokyo.paper.profile.PlayerProfile;
 import com.destroystokyo.paper.profile.ProfileProperty;
+import io.papermc.paper.datacomponent.DataComponentTypes;
 import io.papermc.paper.registry.keys.tags.ItemTypeTagKeys;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.pointer.Pointered;
@@ -20,7 +21,6 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.MemoryConfiguration;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.ItemType;
-import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.jetbrains.annotations.NotNull;
@@ -169,7 +169,7 @@ public class ConfigUtils {
             switch (formattedKey(itemName).substring(1)) {
                 case "foods", "edible": return itemTypes().filter(itemType -> itemType.isEdible()).toList();
                 case "records": return itemTypes().filter(itemType -> itemType.isRecord()).toList();
-                case "damageable", "durability": return itemTypes().filter(itemType -> Damageable.class.isAssignableFrom(itemType.getItemMetaClass())).toList();
+                case "damageable", "durability": return itemTypes().filter(itemType -> itemType.hasDefaultData(DataComponentTypes.MAX_DAMAGE)).toList();
                 case "block": return itemTypes().filter(ItemType::hasBlockType).toList();
                 case "item": return itemTypes().filter(itemType -> !itemType.hasBlockType()).toList();
                 default:

@@ -166,7 +166,7 @@ public class ConfigUtils {
             }
             return itemType;
         } else if(itemName.startsWith("@")) {
-            switch (formattedKey(itemName)) {
+            switch (formattedKey(itemName).substring(1)) {
                 case "foods", "edible": return itemTypes().filter(itemType -> itemType.isEdible()).toList();
                 case "records": return itemTypes().filter(itemType -> itemType.isRecord()).toList();
                 case "damageable", "durability": return itemTypes().filter(itemType -> Damageable.class.isAssignableFrom(itemType.getItemMetaClass())).toList();

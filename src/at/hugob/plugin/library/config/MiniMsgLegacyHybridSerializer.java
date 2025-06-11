@@ -21,10 +21,10 @@ public class MiniMsgLegacyHybridSerializer {
     private MiniMsgLegacyHybridSerializer() {}
 
     /**
-     * Parses legacy & tags to minimessage <> tags
+     * Parses legacy &amp; tags to minimessage &lt;&gt; tags
      *
      * @param input The string to parse
-     * @return the string without & tags
+     * @return the string without &amp; tags
      */
     public static String parseLegacy(String input) {
         input = LEGACY_HEX_PATTERN.matcher(input).replaceAll(matchResult -> "<%s>".formatted(matchResult.group(1)));

@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -17,10 +18,11 @@ public class MiniMsgLegacyHybridSerializerTest {
 
     @ParameterizedTest
     @MethodSource("colorProvider")
-    void colorTests(String text, NamedTextColor color) {
+    void colorTests(String text, TextColor color) {
         assertEquals(serializer.deserialize(text).color(), color);
         assertEquals(serializer.deserialize(text.toUpperCase()).color(), color);
     }
+
     static Stream<Arguments> colorProvider() {
         return Stream.of(
             Arguments.of("&0", NamedTextColor.BLACK),
@@ -38,14 +40,19 @@ public class MiniMsgLegacyHybridSerializerTest {
             Arguments.of("&c", NamedTextColor.RED),
             Arguments.of("&d", NamedTextColor.LIGHT_PURPLE),
             Arguments.of("&e", NamedTextColor.YELLOW),
-            Arguments.of("&f", NamedTextColor.WHITE)
+            Arguments.of("&f", NamedTextColor.WHITE),
+            Arguments.of("&#FF0000", TextColor.color(255, 0, 0)),
+            Arguments.of("&#00FF00", TextColor.color(0, 255, 0)),
+            Arguments.of("&#0000FF", TextColor.color(0, 0, 255))
         );
     }
+
     @ParameterizedTest
     @MethodSource("decoratorProvider")
     void decoratorTests(String text, TextDecoration decoration) {
         assertTrue(serializer.deserialize(text).hasDecoration(decoration));
     }
+
     static Stream<Arguments> decoratorProvider() {
         return Stream.of(
             Arguments.of("&k", TextDecoration.OBFUSCATED),

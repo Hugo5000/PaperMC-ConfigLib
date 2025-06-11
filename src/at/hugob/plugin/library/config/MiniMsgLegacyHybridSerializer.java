@@ -13,7 +13,7 @@ import java.util.regex.Pattern;
  * A Hybrid serializer that substitutes all legacy tags with MiniMessage Tags and then deserializes via MiniMessage
  */
 public class MiniMsgLegacyHybridSerializer implements MiniMessage {
-    private final static Pattern LEGACY_HEX_PATTERN = Pattern.compile("&([0-9a-fA-F]{6})");
+    private final static Pattern LEGACY_HEX_PATTERN = Pattern.compile("&(#[0-9a-fA-F]{6})");
     private final static Pattern LEGACY_PATTERN = Pattern.compile("&([0-9a-fA-FklmnorKLMNOR])");
 
     private final MiniMessage miniMessage = MiniMessage.miniMessage();

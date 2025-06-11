@@ -165,7 +165,7 @@ public class ConfigUtils {
                 Bukkit.getLogger().warning(() -> String.format("\"%s\" is not a valid Tag name!", itemName));
             }
             return itemType;
-        } else if(itemName.startsWith("@")) {
+        } else if (itemName.startsWith("@")) {
             switch (formattedKey(itemName).substring(1)) {
                 case "foods", "edible": return itemTypes().filter(itemType -> itemType.isEdible()).toList();
                 case "records": return itemTypes().filter(itemType -> itemType.isRecord()).toList();
@@ -181,7 +181,7 @@ public class ConfigUtils {
             if (Key.parseable(formatted)) {
                 Key key = Key.key(formatted);
                 var itemType = Registry.ITEM.get(key);
-                if(itemType == null) return Collections.emptyList();
+                if (itemType == null) return Collections.emptyList();
                 return Collections.singleton(itemType);
             } else {
                 var regex = "^" + formatted + "$";
@@ -189,6 +189,7 @@ public class ConfigUtils {
             }
         }
     }
+
     private static Stream<ItemType> itemTypes() {
         return Registry.ITEM.stream().filter(itemType -> itemType != ItemType.AIR);
     }
@@ -431,7 +432,7 @@ public class ConfigUtils {
         @Nullable TagResolver tagResolver, @Nullable Pointered target,
         @NotNull List<String> vistedSubSections
     ) {
-        tagResolver = createSubSectionResolver(config, serializer, tagResolver, target, vistedSubSections);
+        tagResolver = createSubSectionResolver(config, tagResolver);
         if (target == null) {
             return serializer.deserialize(text, tagResolver);
         } else {
@@ -511,13 +512,12 @@ public class ConfigUtils {
     }
 
     private static @NotNull TagResolver createSubSectionResolver(
-        @NotNull ConfigurationSection config, @NotNull MiniMessage serializer,
-        @Nullable TagResolver tagResolver, @Nullable Pointered target,
-        @NotNull List<String> vistedSubSections
+        @NotNull ConfigurationSection config, @Nullable TagResolver tagResolver
     ) {
         final TagResolver subSectionResolver = TagResolver.resolver("ref", (argumentQueue, context) -> {
             final String reference = argumentQueue.popOr("reference expected").value();
-            return Tag.inserting(getComponent(config, reference, serializer, tagResolver, target, vistedSubSections));
+            if(!config.isString(reference)) throw context.newException("reference not found");
+            return Tag.preProcessParsed(config.getString(reference));
         });
         if (tagResolver != null) {
             return TagResolver.resolver(tagResolver, subSectionResolver);

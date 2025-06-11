@@ -20,6 +20,12 @@ public class MiniMsgLegacyHybridSerializer {
 
     private MiniMsgLegacyHybridSerializer() {}
 
+    /**
+     * Parses legacy & tags to minimessage <> tags
+     *
+     * @param input The string to parse
+     * @return the string without & tags
+     */
     public static String parseLegacy(String input) {
         input = LEGACY_HEX_PATTERN.matcher(input).replaceAll(matchResult -> "<%s>".formatted(matchResult.group(1)));
         return LEGACY_PATTERN.matcher(input).replaceAll(matchResult -> switch (matchResult.group(1).toLowerCase()) {

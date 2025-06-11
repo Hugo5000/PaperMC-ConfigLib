@@ -6,6 +6,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
+import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.minimessage.tag.Tag;
+import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -13,14 +17,14 @@ import org.junit.jupiter.params.provider.MethodSource;
 import java.util.stream.Stream;
 
 public class MiniMsgLegacyHybridSerializerTest {
-    private final MiniMsgLegacyHybridSerializer serializer = MiniMsgLegacyHybridSerializer.INSTANCE;
+    private final MiniMessage serializer = MiniMsgLegacyHybridSerializer.INSTANCE;
 
 
     @ParameterizedTest
     @MethodSource("colorProvider")
     void colorTests(String text, TextColor color) {
-        assertEquals(serializer.deserialize(text).color(), color);
-        assertEquals(serializer.deserialize(text.toUpperCase()).color(), color);
+        assertEquals(color, serializer.deserialize(text).color());
+        assertEquals(color, serializer.deserialize(text.toUpperCase()).color());
     }
 
     static Stream<Arguments> colorProvider() {
@@ -61,5 +65,15 @@ public class MiniMsgLegacyHybridSerializerTest {
             Arguments.of("&n", TextDecoration.UNDERLINED),
             Arguments.of("&o", TextDecoration.ITALIC)
         );
+    }
+
+    @Test
+    void preProcessPrepareTest() {
+        var parsed = MiniMsgLegacyHybridSerializer.INSTANCE.deserialize("<colorize>test", TagResolver.builder()
+            .tag("colorize", Tag.preProcessParsed(MiniMsgLegacyHybridSerializer.parseLegacy("&#ff0000")))
+            .build());
+        var serialized = MiniMsgLegacyHybridSerializer.INSTANCE.serialize(parsed);
+        assertEquals("<#ff0000>test", serialized);
+
     }
 }

@@ -516,8 +516,8 @@ public class ConfigUtils {
     ) {
         final TagResolver subSectionResolver = TagResolver.resolver("ref", (argumentQueue, context) -> {
             final String reference = argumentQueue.popOr("reference expected").value();
-            if(!config.isString(reference)) throw context.newException("reference not found");
-            return Tag.preProcessParsed(config.getString(reference));
+            if (!config.isString(reference)) throw context.newException("reference not found");
+            return Tag.preProcessParsed(MiniMsgLegacyHybridSerializer.parseLegacy(config.getString(reference)));
         });
         if (tagResolver != null) {
             return TagResolver.resolver(tagResolver, subSectionResolver);

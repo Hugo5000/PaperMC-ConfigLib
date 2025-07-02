@@ -4,6 +4,7 @@ plugins {
     id("signing")
     id("maven-publish")
     id("com.tddworks.central-portal-publisher") version "0.0.5"
+    id("com.gradleup.shadow") version "9.0.0-beta17"
 }
 
 val ossrhUsername: String by project
@@ -20,6 +21,7 @@ repositories {
     mavenCentral()
     // paper-api
     maven("https://repo.papermc.io/repository/maven-public/")
+    maven("https://repo.opencollab.dev/maven-snapshots")
 }
 
 dependencies {
@@ -27,6 +29,7 @@ dependencies {
     // paper api
     compileOnly("io.papermc.paper:paper-api:1.21.4-R0.1-SNAPSHOT")
 
+    implementation("org.spongepowered:configurate-yaml:4.2.0-GeyserMC-SNAPSHOT")
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.7.1")
     testImplementation("net.kyori:adventure-api:4.21.0")
@@ -71,6 +74,13 @@ tasks.register<Copy>("prepareServer") {
 }
 
 tasks {
+    build {
+        dependsOn(shadowJar)
+    }
+    shadowJar{
+        archiveClassifier.set("")
+        relocate("org.spongepowered", "at.hugob.plugin.library.config.spongepowered") {}
+    }
     compileJava {
         options.compilerArgs.add("-parameters")
         options.encoding = "UTF-8"
